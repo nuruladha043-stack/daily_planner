@@ -42,25 +42,8 @@ if menu == "Dashboard":
         for t in st.session_state.tasks:
             prioritas_count[t["prioritas"]] = prioritas_count.get(t["prioritas"], 0) + 1
         st.bar_chart(prioritas_count)
-
-    st.subheader("📅 Tugas Hari Ini")
-    today_tasks = [t for t in st.session_state.tasks if t["tanggal"] == date.today()]
-
-    if today_tasks:
-        for t in today_tasks:
-            st.write(f"- {t['nama']} ({t['status']})")
     else:
-        st.info("Tidak ada tugas hari ini")
-    st.title("📊 Dashboard To-Do List")
-
-    total = len(st.session_state.tasks)
-    selesai = len([t for t in st.session_state.tasks if t["status"] == "Selesai"])
-    belum = total - selesai
-
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Tugas", total)
-    col2.metric("Selesai", selesai)
-    col3.metric("Belum Selesai", belum)
+        st.info("Belum ada data tugas")
 
     st.subheader("📅 Tugas Hari Ini")
     today_tasks = [t for t in st.session_state.tasks if t["tanggal"] == date.today()]
@@ -121,24 +104,9 @@ elif menu == "Daftar Tugas":
                 if col2.button("🗑 Hapus Tugas", key=f"del_{i}"):
                     st.session_state.tasks.pop(i)
                     st.experimental_rerun()
-    st.title("📋 Daftar Tugas")
-
-    if not st.session_state.tasks:
-        st.warning("Belum ada tugas")
-    else:
-        for i, t in enumerate(st.session_state.tasks):
-            with st.expander(f"{t['nama']} ({t['status']})"):
-                st.write(f"Kategori: {t['kategori']}")
-                st.write(f"Tanggal: {t['tanggal']}")
-                st.write(f"Prioritas: {t['prioritas']}")
-
-                if t["status"] == "Belum Selesai":
-                    if st.button("Tandai Selesai", key=f"done_{i}"):
-                        st.session_state.tasks[i]["status"] = "Selesai"
-                        st.experimental_rerun()
 
 # ===========================
-# TENTANG
+# FILTER TUGAS
 # ===========================
 elif menu == "Filter Tugas":
     st.title("🔍 Filter Tugas")
@@ -167,15 +135,12 @@ elif menu == "Filter Tugas":
         for t in filtered_tasks:
             st.write(f"- {t['nama']} | {t['kategori']} | {t['status']}")
 
+# ===========================
+# TENTANG
+# ===========================
 else:
     st.title("ℹ️ Tentang Aplikasi")
-    st.write(""
-    Aplikasi To-Do List & Daily Planner ini digunakan untuk membantu
-    mengatur tugas harian seperti kuliah, pekerjaan, dan kegiatan pribadi.
-
-    Fitur utama:
-    - Tambah dan kelola tugas
-    - Dashboard ringkasan tugas
-    - Penandaan tugas selesai
-    ""
-    )
+    st.write(
+        "Aplikasi To-Do List & Daily Planner ini membantu pengguna mengelola tugas harian.\n\n"
+        "Fitur utama:\n"
+        "- Dashboard ringkasan tuga
