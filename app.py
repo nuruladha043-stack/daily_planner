@@ -1,146 +1,84 @@
 import streamlit as st
 from datetime import date
 
-# ===========================
-# KONFIGURASI HALAMAN
-# ===========================
-st.set_page_config(page_title="To-Do List & Daily Planner", layout="wide")
+st.set_page_config(page_title="Daily Planner", layout="centered")
 
-# ===========================
-# INISIALISASI DATA
-# ===========================
+# ======================
+# INIT DATA
+# ======================
 if "tasks" not in st.session_state:
     st.session_state.tasks = []
 
-# ===========================
-# SIDEBAR NAVIGASI
-# ===========================
-st.sidebar.title("📝 Daily Planner")
-menu = st.sidebar.radio(
-    "Menu",
-    ["Dashboard", "Tambah Tugas", "Daftar Tugas", "Filter Tugas", "Tentang Aplikasi"]
-)
+st.title("📝 Daily Planner / To-Do List")
 
-# ===========================
-# DASHBOARD
-# ===========================
-if menu == "Dashboard":
-    st.title("📊 Dashboard To-Do List")
+# ======================
+# FORM INPUT
+# ======================
+st.subheader("➕ Tambah Tugas")
 
-    total = len(st.session_state.tasks)
-    selesai = len([t for t in st.session_state.tasks if t["status"] == "Selesai"])
-    belum = total - selesai
+with st.form("form_tugas"):
+    nama = st.text_input("Nama Tugas")
+    kategori = st.selectbox(
+        "Kategori",
+        ["Kuliah", "Pekerjaan", "Pribadi", "Lainnya"]
+    )
+    tanggal = st.date_input("Tanggal", date.today())
+    submit = st.form_submit_button("Tambah")
 
-    col1, col2, col3 = st.columns(3)
-    col1.metric("Total Tugas", total)
-    col2.metric("Selesai", selesai)
-    col3.metric("Belum Selesai", belum)
-
-    st.subheader("📊 Statistik Prioritas")
-    if total > 0:
-        prioritas_count = {}
-        for t in st.session_state.tasks:
-            prioritas_count[t["prioritas"]] = prioritas_count.get(t["prioritas"], 0) + 1
-        st.bar_chart(prioritas_count)
+if submit:
+    if nama:
+        st.session_state.tasks.append({
+            "nama": nama,
+            "kategori": kategori,
+            "tanggal": tanggal,
+            "status": "Belum Selesai"
+        })
+        st.success("Tugas berhasil ditambahkan")
     else:
-        st.info("Belum ada data tugas")
+        st.error("Nama tugas wajib diisi")
 
-    st.subheader("📅 Tugas Hari Ini")
-    today_tasks = [t for t in st.session_state.tasks if t["tanggal"] == date.today()]
+st.divider()
 
-    if today_tasks:
-        for t in today_tasks:
-            st.write(f"- {t['nama']} ({t['status']})")
-    else:
-        st.info("Tidak ada tugas hari ini")
+# ======================
+# DASHBOARD RINGKAS
+# ======================
+st.subheader("📊 Ringkasan")
 
-# ===========================
-# TAMBAH TUGAS
-# ===========================
-elif menu == "Tambah Tugas":
-    st.title("➕ Tambah Tugas Baru")
+total = len(st.session_state.tasks)
+selesai = len([t for t in st.session_state.tasks if t["status"] == "Selesai"])
+belum = total - selesai
 
-    with st.form("form_tugas"):
-        nama = st.text_input("Nama Tugas")
-        kategori = st.selectbox("Kategori", ["Kuliah", "Pekerjaan", "Pribadi", "Lainnya"])
-        tanggal = st.date_input("Tanggal", date.today())
-        prioritas = st.selectbox("Prioritas", ["Rendah", "Sedang", "Tinggi"])
-        submit = st.form_submit_button("Simpan")
+col1, col2, col3 = st.columns(3)
+col1.metric("Total Tugas", total)
+col2.metric("Selesai", selesai)
+col3.metric("Belum", belum)
 
-    if submit:
-        if nama:
-            st.session_state.tasks.append({
-                "nama": nama,
-                "kategori": kategori,
-                "tanggal": tanggal,
-                "prioritas": prioritas,
-                "status": "Belum Selesai"
-            })
-            st.success("Tugas berhasil ditambahkan")
-        else:
-            st.error("Nama tugas wajib diisi")
+st.divider()
 
-# ===========================
+# ======================
 # DAFTAR TUGAS
-# ===========================
-elif menu == "Daftar Tugas":
-    st.title("📋 Daftar Tugas")
+# ======================
+st.subheader("📋 Daftar Tugas")
 
-    if not st.session_state.tasks:
-        st.warning("Belum ada tugas")
-    else:
-        for i, t in enumerate(st.session_state.tasks):
-            with st.expander(f"{t['nama']} ({t['status']})"):
-                st.write(f"Kategori: {t['kategori']}")
-                st.write(f"Tanggal: {t['tanggal']}")
-                st.write(f"Prioritas: {t['prioritas']}")
+if not st.session_state.tasks:
+    st.info("Belum ada tugas")
+else:
+    for i, t in enumerate(st.session_state.tasks):
+        with st.container():
+            col1, col2, col3 = st.columns([4, 2, 2])
 
-                col1, col2 = st.columns(2)
-                if t["status"] == "Belum Selesai":
-                    if col1.button("✔ Tandai Selesai", key=f"done_{i}"):
-                        st.session_state.tasks[i]["status"] = "Selesai"
-                        st.experimental_rerun()
+            col1.write(f"**{t['nama']}**")
+            col2.write(t["kategori"])
+            col3.write(t["status"])
 
-                if col2.button("🗑 Hapus Tugas", key=f"del_{i}"):
-                    st.session_state.tasks.pop(i)
+            col4, col5 = st.columns([2, 2])
+
+            if t["status"] == "Belum Selesai":
+                if col4.button("✔ Selesai", key=f"done{i}"):
+                    st.session_state.tasks[i]["status"] = "Selesai"
                     st.experimental_rerun()
 
-# ===========================
-# FILTER TUGAS
-# ===========================
-elif menu == "Filter Tugas":
-    st.title("🔍 Filter Tugas")
+            if col5.button("🗑 Hapus", key=f"del{i}"):
+                st.session_state.tasks.pop(i)
+                st.experimental_rerun()
 
-    kategori_filter = st.selectbox(
-        "Filter berdasarkan Kategori",
-        ["Semua", "Kuliah", "Pekerjaan", "Pribadi", "Lainnya"]
-    )
-
-    status_filter = st.selectbox(
-        "Filter berdasarkan Status",
-        ["Semua", "Belum Selesai", "Selesai"]
-    )
-
-    filtered_tasks = st.session_state.tasks
-
-    if kategori_filter != "Semua":
-        filtered_tasks = [t for t in filtered_tasks if t["kategori"] == kategori_filter]
-
-    if status_filter != "Semua":
-        filtered_tasks = [t for t in filtered_tasks if t["status"] == status_filter]
-
-    if not filtered_tasks:
-        st.info("Tidak ada tugas sesuai filter")
-    else:
-        for t in filtered_tasks:
-            st.write(f"- {t['nama']} | {t['kategori']} | {t['status']}")
-
-# ===========================
-# TENTANG
-# ===========================
-else:
-    st.title("ℹ️ Tentang Aplikasi")
-    st.write(
-        "Aplikasi To-Do List & Daily Planner ini membantu pengguna mengelola tugas harian.\n\n"
-        "Fitur utama:\n"
-        "- Dashboard ringkasan tuga
