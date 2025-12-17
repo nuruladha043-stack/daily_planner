@@ -20,11 +20,9 @@ st.subheader("➕ Tambah Tugas")
 
 with st.form("form_tugas"):
     nama = st.text_input("Nama Tugas")
-    kategori = st.selectbox(
-        "Kategori",
-        ["Kuliah", "Pekerjaan", "Pribadi", "Lainnya"]
-    )
-    tanggal = st.date_input("Tanggal", date.today())
+    kategori = st.selectbox("Kategori", ["Kuliah", "Pekerjaan", "Pribadi", "Lainnya"])
+    tanggal = st.date_input("Deadline", date.today())
+    prioritas = st.selectbox("Prioritas", ["Rendah", "Sedang", "Tinggi"])
     submit = st.form_submit_button("Tambah")
 
 if submit:
@@ -33,6 +31,7 @@ if submit:
             "nama": nama,
             "kategori": kategori,
             "tanggal": tanggal,
+            "prioritas": prioritas,
             "status": "Belum Selesai"
         })
         st.success("Tugas berhasil ditambahkan")
@@ -42,54 +41,58 @@ if submit:
 st.divider()
 
 # ======================
-# DASHBOARD RINGKAS
+# DASHBOARD
 # ======================
 st.subheader("📊 Ringkasan")
 
 total = len(st.session_state.tasks)
 selesai = len([t for t in st.session_state.tasks if t["status"] == "Selesai"])
 belum = total - selesai
+overdue = len([
+    t for t in st.session_state.tasks
+    if t["status"] == "Belum Selesai" and t["tanggal"] < date.today()
+])
 
-col1, col2, col3 = st.columns(3)
-col1.metric("Total Tugas", total)
-col2.metric("Selesai", selesai)
-col3.metric("Belum", belum)
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Total", total)
+c2.metric("Selesai", selesai)
+c3.metric("Belum", belum)
+c4.metric("Overdue", overdue)
 
 st.divider()
 
 # ======================
-# FITUR BARU 1: SEARCH
+# SEARCH & SORT
 # ======================
-st.subheader("🔎 Cari Tugas")
-keyword = st.text_input("Cari berdasarkan nama tugas")
+st.subheader("🔍 Cari & Urutkan")
+keyword = st.text_input("Cari tugas")
+sort_by = st.selectbox("Urutkan berdasarkan", ["Deadline", "Prioritas"])
 
 # ======================
-# FITUR BARU 2: FILTER
+# FILTER
 # ======================
-st.subheader("🗂 Filter")
-filter_kategori = st.selectbox(
-    "Filter Kategori",
-    ["Semua", "Kuliah", "Pekerjaan", "Pribadi", "Lainnya"]
-)
-
-filter_status = st.selectbox(
-    "Filter Status",
-    ["Semua", "Belum Selesai", "Selesai"]
-)
+filter_kategori = st.selectbox("Filter Kategori", ["Semua", "Kuliah", "Pekerjaan", "Pribadi", "Lainnya"])
+filter_status = st.selectbox("Filter Status", ["Semua", "Belum Selesai", "Selesai"])
 
 # ======================
-# PROSES FILTER & SEARCH
+# PROSES DATA
 # ======================
-filtered_tasks = st.session_state.tasks
+data = st.session_state.tasks
 
 if keyword:
-    filtered_tasks = [t for t in filtered_tasks if keyword.lower() in t["nama"].lower()]
+    data = [t for t in data if keyword.lower() in t["nama"].lower()]
 
 if filter_kategori != "Semua":
-    filtered_tasks = [t for t in filtered_tasks if t["kategori"] == filter_kategori]
+    data = [t for t in data if t["kategori"] == filter_kategori]
 
 if filter_status != "Semua":
-    filtered_tasks = [t for t in filtered_tasks if t["status"] == filter_status]
+    data = [t for t in data if t["status"] == filter_status]
+
+if sort_by == "Deadline":
+    data = sorted(data, key=lambda x: x["tanggal"])
+else:
+    priority_order = {"Tinggi": 1, "Sedang": 2, "Rendah": 3}
+    data = sorted(data, key=lambda x: priority_order[x["prioritas"]])
 
 st.divider()
 
@@ -98,44 +101,43 @@ st.divider()
 # ======================
 st.subheader("📋 Daftar Tugas")
 
-if not filtered_tasks:
-    st.info("Tidak ada tugas yang ditampilkan")
+if not data:
+    st.info("Tidak ada tugas")
 else:
-    for i, t in enumerate(filtered_tasks):
-        col1, col2, col3, col4 = st.columns([4, 2, 2, 2])
-
+    for t in data:
+        col1, col2, col3, col4, col5 = st.columns([4, 2, 2, 2, 2])
         col1.write(f"**{t['nama']}**")
         col2.write(t["kategori"])
-        col3.write(t["status"])
+        col3.write(t["prioritas"])
+
+        if t["status"] == "Belum Selesai" and t["tanggal"] < date.today():
+            col4.error("Overdue")
+        else:
+            col4.write(t["status"])
 
         if t["status"] == "Belum Selesai":
-            if col4.button("✔ Selesai", key=f"done{i}"):
+            if col5.button("✔", key=f"done{t['nama']}"):
                 t["status"] = "Selesai"
                 st.experimental_rerun()
-
-        if col4.button("🗑 Hapus", key=f"del{i}"):
-            st.session_state.tasks.remove(t)
-            st.experimental_rerun()
 
 st.divider()
 
 # ======================
-# FITUR BARU 3: EXPORT CSV
+# EXPORT & RESET
 # ======================
-st.subheader("📥 Export Data")
+st.subheader("📥 Data")
 
 if st.session_state.tasks:
     output = io.StringIO()
-    writer = csv.DictWriter(output, fieldnames=["nama", "kategori", "tanggal", "status"])
+    writer = csv.DictWriter(output, fieldnames=["nama", "kategori", "tanggal", "prioritas", "status"])
     writer.writeheader()
     for t in st.session_state.tasks:
         writer.writerow(t)
 
-    st.download_button(
-        label="Download To-Do List (CSV)",
-        data=output.getvalue(),
-        file_name="todo_list.csv",
-        mime="text/csv"
-    )
+    st.download_button("Download CSV", output.getvalue(), "todo_list.csv", "text/csv")
+
+    if st.button("🗑 Hapus Semua Tugas"):
+        st.session_state.tasks = []
+        st.experimental_rerun()
 else:
-    st.info("Tidak ada data untuk diexport")
+    st.info("Belum ada data")
